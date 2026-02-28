@@ -62,16 +62,10 @@ def on_connect(client, userdata, flags, rc, properties=None):
     '''
     print("Conectando al broker MQTT...", mqtt.connack_string(rc))
 
-
-def on_disconnect(client: mqtt.Client, userdata, rc, properties=None):
-    '''
-    Función que se ejecuta cuando se desconecta del broker.
-    Intenta reconectar al bróker.
-    '''
+def on_disconnect(client: mqtt.Client, userdata, flags, rc, properties=None):
     print("Desconectado con mensaje:" + str(mqtt.connack_string(rc)))
     print("Reconectando...")
     client.reconnect()
-
 
 def setup_mqtt():
     '''
