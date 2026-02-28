@@ -8,15 +8,11 @@ import schedule
 import time
 from django.conf import settings
 
+# Initialized without connecting — setup_mqtt() handles the full setup
 client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-client.connect(settings.MQTT_USER_PUB)
 
 
 def analyze_data():
-    # Consulta todos los datos de la última hora, los agrupa por estación y variable
-    # Compara el promedio con los valores límite que están en la base de datos para esa variable.
-    # Si el promedio se excede de los límites, se envia un mensaje de alerta.
-
     print("Calculando alertas...")
 
     data = Data.objects.filter(
@@ -60,14 +56,14 @@ def analyze_data():
     print(alerts, "alertas enviadas")
 
 
-def on_connect(client, userdata, flags, rc):
+def on_connect(client, userdata, flags, rc, properties=None):
     '''
     Función que se ejecuta cuando se conecta al bróker.
     '''
     print("Conectando al broker MQTT...", mqtt.connack_string(rc))
 
 
-def on_disconnect(client: mqtt.Client, userdata, rc):
+def on_disconnect(client: mqtt.Client, userdata, rc, properties=None):
     '''
     Función que se ejecuta cuando se desconecta del broker.
     Intenta reconectar al bróker.
@@ -81,11 +77,11 @@ def setup_mqtt():
     '''
     Configura el cliente MQTT para conectarse al broker.
     '''
-
     print("Iniciando cliente MQTT...", settings.MQTT_HOST, settings.MQTT_PORT)
     global client
     try:
-        client = mqtt.Client(settings.MQTT_USER_PUB)
+        # Use VERSION2 API and pass client_id separately from credentials
+        client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=settings.MQTT_USER_PUB)
         client.on_connect = on_connect
         client.on_disconnect = on_disconnect
 
@@ -93,8 +89,7 @@ def setup_mqtt():
             client.tls_set(ca_certs=settings.CA_CRT_PATH,
                            tls_version=ssl.PROTOCOL_TLSv1_2, cert_reqs=ssl.CERT_NONE)
 
-        client.username_pw_set(settings.MQTT_USER_PUB,
-                               settings.MQTT_PASSWORD_PUB)
+        client.username_pw_set(settings.MQTT_USER_PUB, settings.MQTT_PASSWORD_PUB)
         client.connect(settings.MQTT_HOST, settings.MQTT_PORT)
 
     except Exception as e:
